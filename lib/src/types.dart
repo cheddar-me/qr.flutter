@@ -199,3 +199,33 @@ class QrEmbeddedImageStyle {
     return false;
   }
 }
+
+/// Defines how embedded image will be blended into the qr code
+///
+/// In layman terms, qr code will not be drawn behind embedded image so it
+/// looks like the image is part of the qr code.
+class QrEmbeddedImageBlendStyle {
+  /// Create a style for blending image
+  QrEmbeddedImageBlendStyle({
+    this.sizePortion = 0.3,
+    this.blendMode = QrEmbeddedImageBlendMode.square,
+  });
+
+  /// The part of the image size (excluding padding) that should be removed
+  /// Most of the times it will be the same as the proportion of the embeded
+  /// image to the size of the QR code
+  final double sizePortion;
+
+  /// Defines how we should determine the shape of the image
+  final QrEmbeddedImageBlendMode blendMode;
+}
+
+/// Defines how we should determine the shape of the image
+enum QrEmbeddedImageBlendMode {
+  /// Will cause to remove the dots in a square with a side equal to sizePortion
+  square,
+
+  /// Will cause to remove the dots in a circle with a radius equal to
+  /// sizePortion/2
+  circle,
+}

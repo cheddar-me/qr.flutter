@@ -37,7 +37,7 @@ class QrPainter extends CustomPainter {
     this.gapless = false,
     this.embeddedImage,
     this.embeddedImageStyle,
-    this.blendEmbeddedImage = false,
+    this.blendEmbeddedImageStyle,
     this.eyeStyle = const QrEyeStyle(
       eyeShape: QrEyeShape.square,
       color: Color(0xFF000000),
@@ -60,7 +60,7 @@ class QrPainter extends CustomPainter {
     this.gapless = false,
     this.embeddedImage,
     this.embeddedImageStyle,
-    this.blendEmbeddedImage = false,
+    this.blendEmbeddedImageStyle,
     this.eyeStyle = const QrEyeStyle(
       eyeShape: QrEyeShape.square,
       color: Color(0xFF000000),
@@ -102,7 +102,7 @@ class QrPainter extends CustomPainter {
   ///
   /// In layman terms, qr code will not be drawn behind embedded image so it
   /// looks like the image is part of the qr code.
-  final bool blendEmbeddedImage;
+  final QrEmbeddedImageBlendStyle? blendEmbeddedImageStyle;
 
   /// Styling options for the image overlay.
   final QrEmbeddedImageStyle? embeddedImageStyle;
@@ -219,7 +219,7 @@ class QrPainter extends CustomPainter {
         // draw the finder patterns independently
         if (_isFinderPatternPosition(x, y)) continue;
         // Exclude if pixel is in image gap space
-        if (blendEmbeddedImage && _isLogoArea(x, y)) continue;
+        if (blendEmbeddedImageStyle != null && _isLogoArea(x, y)) continue;
         final paint = _qr!.isDark(y, x) ? pixelPaint : emptyPixelPaint;
         if (paint == null) continue;
         // paint a pixel
@@ -278,14 +278,21 @@ class QrPainter extends CustomPainter {
 
   bool _isLogoArea(int x, int y) {
     //Find center of module count and portion to cut out of QR
-    var center = _qr!.moduleCount / 2;
-    var canvasPortion = _qr!.moduleCount * 0.15;
+    final center = (_qr!.moduleCount / 2).floor();
+    var radius = (_qr!.moduleCount * blendEmbeddedImageStyle!.sizePortion / 2);
 
-    if (x > center - canvasPortion &&
-        x < center + canvasPortion &&
-        y > center - canvasPortion &&
-        y < center + canvasPortion) return true;
-    return false;
+    if (blendEmbeddedImageStyle!.blendMode == QrEmbeddedImageBlendMode.square) {
+      return x > center - radius &&
+          x < center + radius &&
+          y > center - radius &&
+          y < center + radius;
+    } else {
+      radius += 1;
+      final isInCircle =
+          (x - center) * (x - center) + (y - center) * (y - center) <
+              (radius) * (radius);
+      return isInCircle;
+    }
   }
 
   bool _isFinderPatternPosition(int x, int y) {
@@ -357,10 +364,20 @@ class QrPainter extends CustomPainter {
       canvas.drawRect(outerRect, outerPaint);
       canvas.drawRect(innerRect, innerPaint);
       canvas.drawRect(dotRect, dotPaint);
-    }
-    if (eyeStyle.eyeShape == QrEyeShape.custom) {
-      _drawCustomEyeStyle(
-          position, outerRect, outerPaint, dotRect, dotPaint, canvas);
+    } else if (eyeStyle.eyeShape == QrEyeShape.custom) {
+      final outerRadius = eyeStyle.shape.topLeft.eyeShape.topLeft;
+      final dotRadius = eyeStyle.shape.topLeft.eyeballShape.topLeft;
+
+      final roundedOuterStrokeRect =
+          RRect.fromRectAndRadius(outerRect, outerRadius);
+      canvas.drawRRect(roundedOuterStrokeRect, outerPaint);
+
+      final roundedInnerStrokeRect =
+          RRect.fromRectAndRadius(outerRect, outerRadius);
+      canvas.drawRRect(roundedInnerStrokeRect, innerPaint);
+
+      final roundedDotStrokeRect = RRect.fromRectAndRadius(dotRect, dotRadius);
+      canvas.drawRRect(roundedDotStrokeRect, dotPaint);
     } else {
       final roundedOuterStrokeRect =
           RRect.fromRectAndRadius(outerRect, Radius.circular(radius));
@@ -377,12 +394,14 @@ class QrPainter extends CustomPainter {
   }
 
   void _drawCustomEyeStyle(
-      FinderPatternPosition position,
-      ui.Rect outerRect,
-      ui.Paint outerPaint,
-      ui.Rect dotRect,
-      ui.Paint dotPaint,
-      ui.Canvas canvas) {
+    FinderPatternPosition position,
+    ui.Rect outerRect,
+    ui.Paint outerPaint,
+    ui.Rect dotRect,
+    ui.Paint dotPaint,
+    ui.Canvas canvas,
+    double dotSize,
+  ) {
     BorderRadius eyeBorderRadius;
     BorderRadius eyeballBorderRadius;
     var dashedBorder = false;
@@ -405,8 +424,12 @@ class QrPainter extends CustomPainter {
     }
     var eyePath = drawRRect(outerRect.left, outerRect.top, outerRect.width,
         outerRect.height, eyeBorderRadius, outerPaint.strokeWidth);
-    var eyeBallPath = drawRRect(dotRect.left, dotRect.top, dotRect.width,
-        dotRect.height, eyeballBorderRadius, dotPaint.strokeWidth);
+    // var eyeBallPath = drawRRect(dotRect.left, dotRect.top, dotRect.width,
+    //     dotRect.height, eyeballBorderRadius, dotPaint.strokeWidth);
+
+    final roundedDotStrokeRect =
+        RRect.fromRectAndRadius(dotRect, Radius.circular(dotSize));
+    canvas.drawRRect(roundedDotStrokeRect, dotPaint);
 
     if (dashedBorder) {
       var eyeDashPath = Path();
@@ -429,7 +452,7 @@ class QrPainter extends CustomPainter {
     } else {
       canvas.drawPath(eyePath..close(), outerPaint);
     }
-    canvas.drawPath(eyeBallPath..close(), dotPaint);
+    // canvas.drawPath(eyeBallPath..close(), dotPaint);
   }
 
   /// Draws a rounded rectangle using the current state of the canvas.
@@ -538,12 +561,15 @@ class _PaintMetrics {
   final double gapSize;
 
   late final double _pixelSize;
+
   double get pixelSize => _pixelSize;
 
   late final double _innerContentSize;
+
   double get innerContentSize => _innerContentSize;
 
   late final double _inset;
+
   double get inset => _inset;
 
   void _calculateMetrics() {
