@@ -279,7 +279,7 @@ class QrPainter extends CustomPainter {
   bool _isLogoArea(int x, int y) {
     //Find center of module count and portion to cut out of QR
     final center = (_qr!.moduleCount / 2).floor();
-    var radius = (_qr!.moduleCount * blendEmbeddedImageStyle!.sizePortion / 2);
+    var radius = _qr!.moduleCount * blendEmbeddedImageStyle!.sizePortion / 2;
 
     if (blendEmbeddedImageStyle!.blendMode == QrEmbeddedImageBlendMode.square) {
       return x > center - radius &&
@@ -508,6 +508,19 @@ class QrPainter extends CustomPainter {
         Size(embeddedImage!.width.toDouble(), embeddedImage!.height.toDouble());
     final src = Alignment.center.inscribe(srcSize, Offset.zero & srcSize);
     final dst = Alignment.center.inscribe(size, position & size);
+
+    //cut out the image in the middle to a circle
+    final path = Path()
+      ..addOval(
+        Rect.fromLTWH(
+          position.dx,
+          position.dy,
+          size.width.toDouble(),
+          size.height.toDouble(),
+        ),
+      );
+    canvas.clipPath(path);
+
     canvas.drawImageRect(embeddedImage!, src, dst, paint);
   }
 
