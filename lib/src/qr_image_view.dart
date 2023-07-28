@@ -19,10 +19,10 @@ import 'types.dart';
 import 'validator.dart';
 
 /// A widget that shows a QR code.
-class QrImage extends StatefulWidget {
+class QrImageView extends StatefulWidget {
   /// Create a new QR code using the [String] data and the passed options (or
   /// using the default options).
-  QrImage({
+  QrImageView({
     required String data,
     Key? key,
     this.size,
@@ -54,7 +54,7 @@ class QrImage extends StatefulWidget {
 
   /// Create a new QR code using the [QrCode] data and the passed options (or
   /// using the default options).
-  QrImage.withQr({
+  QrImageView.withQr({
     required QrCode qr,
     Key? key,
     this.size,
@@ -158,10 +158,10 @@ class QrImage extends StatefulWidget {
   final QrDataModuleStyle dataModuleStyle;
 
   @override
-  _QrImageState createState() => _QrImageState();
+  _QrImageViewState createState() => _QrImageViewState();
 }
 
-class _QrImageState extends State<QrImage> {
+class _QrImageViewState extends State<QrImageView> {
   /// The QR code string data.
   QrCode? _qr;
 
@@ -284,7 +284,7 @@ class _QrImageState extends State<QrImage> {
 }
 
 /// A function type to be called when any form of error occurs while
-/// painting a [QrImage].
+/// painting a [QrImageView].
 typedef QrErrorBuilder = Widget Function(BuildContext context, Object? error);
 
 class _QrContentView extends StatelessWidget {
